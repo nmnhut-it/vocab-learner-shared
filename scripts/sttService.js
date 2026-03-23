@@ -177,7 +177,68 @@ class STTService {
         }
     }
 
-    // Transcribe using Web Speech API
+    // Start live transcription from mic (call when recording starts)
+    // Returns control object with stop() and getTranscript()
+    startLiveTranscription(onInterim, onFinal) {
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if (!SpeechRecognition) {
+            throw new Error('Speech recognition not available');
+        }
+
+        const recognition = new SpeechRecognition();
+        recognition.continuous = true;
+        recognition.interimResults = true;
+        recognition.lang = 'en-US';
+
+        let fullTranscript = '';
+        let stopped = false;
+
+        recognition.onresult = (event) => {
+            let interim = '';
+            for (let i = event.resultIndex; i < event.results.length; i++) {
+                if (event.results[i].isFinal) {
+                    fullTranscript += event.results[i][0].transcript + ' ';
+                    if (onFinal) onFinal(fullTranscript.trim());
+                } else {
+                    interim += event.results[i][0].transcript;
+                    if (onInterim) onInterim(fullTranscript + interim);
+                }
+            }
+        };
+
+        recognition.onerror = (event) => {
+            if (event.error !== 'no-speech') {
+                console.error('Speech recognition error:', event.error);
+            }
+        };
+
+        // Auto-restart on end (continuous mode sometimes stops)
+        recognition.onend = () => {
+            if (!stopped) {
+                try { recognition.start(); } catch (e) { /* ignore */ }
+            }
+        };
+
+        recognition.start();
+
+        return {
+            stop: () => {
+                stopped = true;
+                recognition.stop();
+                return fullTranscript.trim();
+            },
+            getTranscript: () => fullTranscript.trim()
+        };
+    }
+
+    // Check if live transcription is supported
+    isLiveTranscriptionAvailable() {
+        return !!(window.SpeechRecognition || window.webkitSpeechRecognition);
+    }
+
+    // Legacy: Transcribe using Web Speech API on a recorded blob
+    // NOTE: This approach (playing audio back through speakers) is unreliable.
+    // Prefer startLiveTranscription() for real-time mic transcription.
     async transcribeBrowser(audioBlob) {
         if (!this.recognition) {
             throw new Error('Web Speech API not available');
@@ -261,31 +322,21 @@ class STTService {
         }
     }
 
-    // Main transcribe method with auto-fallback
+    // Main transcribe method with auto-fallback (post-recording)
+    // Prefer startLiveTranscription() for real-time results.
     async transcribe(audioBlob, options = {}) {
         const { mode = this.mode, geminiApiKey = null } = options;
 
-        // Auto mode: try Whisper → Browser → Gemini
+        // Auto mode: try Whisper → Gemini (skip browser blob playback)
         if (mode === 'auto') {
-            // Try Whisper first
             if (this.isLoaded || !this.loadError) {
                 try {
                     return await this.transcribeWhisper(audioBlob);
                 } catch (error) {
-                    console.warn('Whisper failed, trying browser STT:', error);
+                    console.warn('Whisper failed:', error);
                 }
             }
 
-            // Try browser STT
-            if (this.recognition) {
-                try {
-                    return await this.transcribeBrowser(audioBlob);
-                } catch (error) {
-                    console.warn('Browser STT failed, trying Gemini:', error);
-                }
-            }
-
-            // Try Gemini as last resort
             if (geminiApiKey) {
                 try {
                     return await this.transcribeGemini(audioBlob, geminiApiKey);
@@ -294,10 +345,9 @@ class STTService {
                 }
             }
 
-            throw new Error('All STT methods failed');
+            throw new Error('All STT methods failed. Use manual input.');
         }
 
-        // Specific mode
         switch (mode) {
             case 'whisper':
                 return await this.transcribeWhisper(audioBlob);
