@@ -90,6 +90,89 @@ class TelegramSender {
         return data.result;
     }
 
+    async sendMessageWithKeyboard(message, inlineKeyboard) {
+        const url = `${TELEGRAM_API_BASE}${this.botToken}/sendMessage`;
+
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                chat_id: this.chatId,
+                text: message,
+                parse_mode: 'HTML',
+                reply_markup: { inline_keyboard: inlineKeyboard }
+            })
+        });
+
+        return this.handleResponse(response);
+    }
+
+    async pollForApproval(sessionId, timeoutMs = 300000) {
+        const POLL_INTERVAL_MS = 3000;
+        const startTime = Date.now();
+        let offset = 0;
+
+        while (Date.now() - startTime < timeoutMs) {
+            try {
+                const url = `${TELEGRAM_API_BASE}${this.botToken}/getUpdates`;
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ offset, timeout: 2 })
+                });
+
+                const data = await response.json();
+
+                if (data.ok && data.result.length > 0) {
+                    for (const update of data.result) {
+                        offset = update.update_id + 1;
+
+                        if (update.callback_query) {
+                            const callbackData = update.callback_query.data;
+
+                            if (callbackData === `approve_${sessionId}`) {
+                                await this.answerCallbackQuery(
+                                    update.callback_query.id,
+                                    'Session approved!'
+                                );
+                                return { approved: true };
+                            }
+
+                            if (callbackData === `reject_${sessionId}`) {
+                                await this.answerCallbackQuery(
+                                    update.callback_query.id,
+                                    'Session rejected.'
+                                );
+                                return { approved: false };
+                            }
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error('Poll error:', error);
+            }
+
+            await new Promise(resolve => setTimeout(resolve, POLL_INTERVAL_MS));
+        }
+
+        return { approved: false, timeout: true };
+    }
+
+    async answerCallbackQuery(callbackQueryId, text) {
+        const url = `${TELEGRAM_API_BASE}${this.botToken}/answerCallbackQuery`;
+
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                callback_query_id: callbackQueryId,
+                text: text
+            })
+        });
+
+        return this.handleResponse(response);
+    }
+
     formatAudioCaption(questionText, questionNum, category, duration, studentName = null) {
         const durationSec = Math.round(duration / 1000);
 

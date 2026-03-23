@@ -19,7 +19,11 @@ class StudentSession {
             return false;
         }
 
-        return !this.isSessionExpired();
+        if (this.isSessionExpired()) {
+            return false;
+        }
+
+        return this.currentSession.approvalStatus === 'approved';
     }
 
     isSessionExpired() {
@@ -38,7 +42,9 @@ class StudentSession {
             name: studentName,
             photoDataUrl: photoDataUrl,
             sessionStartTime: Date.now(),
-            sessionId: this.generateSessionId()
+            sessionId: this.generateSessionId(),
+            approvalStatus: 'pending',
+            telegramMessageId: null
         };
 
         this.saveSession();
@@ -78,6 +84,30 @@ class StudentSession {
 
     generateSessionId() {
         return `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    }
+
+    hasPendingSession() {
+        this.loadSession();
+
+        if (!this.currentSession || this.isSessionExpired()) {
+            return false;
+        }
+
+        return this.currentSession.approvalStatus === 'pending';
+    }
+
+    setApprovalStatus(status) {
+        if (this.currentSession) {
+            this.currentSession.approvalStatus = status;
+            this.saveSession();
+        }
+    }
+
+    setTelegramMessageId(msgId) {
+        if (this.currentSession) {
+            this.currentSession.telegramMessageId = msgId;
+            this.saveSession();
+        }
     }
 
     getStudentName() {
