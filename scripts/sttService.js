@@ -89,6 +89,19 @@ class STTService {
                 console.log('Downloading Whisper model from remote');
             }
 
+            // Check cache expiry and clear stale cache if needed
+            if (window.modelCacheManager) {
+                try {
+                    await window.modelCacheManager.initDB();
+                    if (await window.modelCacheManager.isModelExpired('Xenova/whisper-small.en')) {
+                        console.log('Whisper cache expired, clearing...');
+                        await window.modelCacheManager.clearModelCache('Xenova/whisper-small.en');
+                    }
+                } catch (e) {
+                    console.warn('Cache expiry check failed:', e);
+                }
+            }
+
             // Track multiple file downloads
             const fileProgress = new Map();
             let totalFiles = 0;
@@ -122,6 +135,15 @@ class STTService {
             this.isLoaded = true;
             this.isLoading = false;
             console.log('Whisper model loaded successfully');
+
+            // Record download in cache metadata
+            if (window.modelCacheManager) {
+                try {
+                    await window.modelCacheManager.recordModelDownload('Xenova/whisper-small.en');
+                } catch (e) {
+                    console.warn('Failed to record cache metadata:', e);
+                }
+            }
 
             return true;
 
