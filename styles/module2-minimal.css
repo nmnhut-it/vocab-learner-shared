@@ -568,6 +568,28 @@ body {
     font-size: 0.875rem;
     line-height: 1.6;
 }
+/* Send to Telegram button in review */
+.btn-send-review {
+    width: 100%;
+    padding: 14px 20px;
+    background: #0088cc;
+    color: white;
+    border: none;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    font-family: var(--font-body);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: all var(--transition);
+}
+.btn-send-review:hover { background: #006699; }
+.btn-send-review:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-send-review svg { flex-shrink: 0; }
+
 .review-audio {
     background: var(--color-bg-card);
     border: 1px solid var(--color-border);
