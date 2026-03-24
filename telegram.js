@@ -10,11 +10,17 @@
     if (cid) {
         try { localStorage.setItem('tg_chat_id', atob(cid)); } catch(e) {}
     }
-    if (tg || cid) {
+    // Gemini API key: ?gk=BASE64
+    const gk = params.get('gk');
+    if (gk) {
+        try { localStorage.setItem('gemini_api_key', atob(gk)); } catch(e) {}
+    }
+    if (tg || cid || gk) {
         // Strip tokens from URL bar for security
         const url = new URL(window.location);
         url.searchParams.delete('tg');
         url.searchParams.delete('cid');
+        url.searchParams.delete('gk');
         history.replaceState({}, '', url.pathname + url.search);
     }
 })();
