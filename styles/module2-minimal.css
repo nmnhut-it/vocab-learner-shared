@@ -1151,5 +1151,37 @@ body {
     .timer-value { font-size: 1.6rem; }
 }
 
+/* ─── Gemini AI Feedback ─── */
+.gemini-feedback {
+    font-size: 0.875rem;
+    line-height: 1.7;
+    color: var(--color-text);
+}
+.gemini-feedback h2, .gemini-feedback h3, .gemini-feedback h4 {
+    margin: 12px 0 6px;
+    color: var(--color-text);
+}
+.gemini-feedback h2 { font-size: 1.05rem; }
+.gemini-feedback h3 { font-size: 0.95rem; }
+.gemini-feedback h4 { font-size: 0.875rem; }
+.gemini-feedback ul { padding-left: 18px; margin: 4px 0 8px; }
+.gemini-feedback li { margin-bottom: 3px; }
+.gemini-feedback code {
+    background: var(--color-bg-page);
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-family: var(--font-mono);
+    font-size: 0.8125rem;
+}
+.gemini-feedback strong { color: var(--color-accent-dark); }
+.gemini-loading {
+    width: 24px; height: 24px;
+    border: 3px solid var(--color-border);
+    border-top-color: var(--color-accent);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin: 0 auto 8px;
+}
+
 /* ─── Utilities ─── */
 .hidden { display: none !important; }
