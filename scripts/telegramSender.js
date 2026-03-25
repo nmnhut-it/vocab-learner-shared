@@ -112,16 +112,26 @@ class TelegramSender {
         const startTime = Date.now();
         let offset = 0;
 
+        await this.clearWebhook();
+
         while (Date.now() - startTime < timeoutMs) {
             try {
                 const url = `${TELEGRAM_API_BASE}${this.botToken}/getUpdates`;
                 const response = await fetch(url, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ offset, timeout: 2 })
+                    body: JSON.stringify({
+                        offset,
+                        timeout: 2,
+                        allowed_updates: ['callback_query']
+                    })
                 });
 
                 const data = await response.json();
+
+                if (!data.ok) {
+                    console.error('getUpdates failed:', data.description);
+                }
 
                 if (data.ok && data.result.length > 0) {
                     for (const update of data.result) {
@@ -131,18 +141,26 @@ class TelegramSender {
                             const callbackData = update.callback_query.data;
 
                             if (callbackData === `approve_${sessionId}`) {
-                                await this.answerCallbackQuery(
-                                    update.callback_query.id,
-                                    'Session approved!'
-                                );
+                                try {
+                                    await this.answerCallbackQuery(
+                                        update.callback_query.id,
+                                        'Session approved!'
+                                    );
+                                } catch (ackError) {
+                                    console.warn('Failed to ack callback:', ackError);
+                                }
                                 return { approved: true };
                             }
 
                             if (callbackData === `reject_${sessionId}`) {
-                                await this.answerCallbackQuery(
-                                    update.callback_query.id,
-                                    'Session rejected.'
-                                );
+                                try {
+                                    await this.answerCallbackQuery(
+                                        update.callback_query.id,
+                                        'Session rejected.'
+                                    );
+                                } catch (ackError) {
+                                    console.warn('Failed to ack callback:', ackError);
+                                }
                                 return { approved: false };
                             }
                         }
@@ -156,6 +174,19 @@ class TelegramSender {
         }
 
         return { approved: false, timeout: true };
+    }
+
+    async clearWebhook() {
+        try {
+            const url = `${TELEGRAM_API_BASE}${this.botToken}/deleteWebhook`;
+            const response = await fetch(url, { method: 'POST' });
+            const data = await response.json();
+            if (!data.ok) {
+                console.warn('deleteWebhook failed:', data.description);
+            }
+        } catch (error) {
+            console.warn('Failed to clear webhook:', error);
+        }
     }
 
     async answerCallbackQuery(callbackQueryId, text) {
