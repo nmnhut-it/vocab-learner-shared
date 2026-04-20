@@ -1192,6 +1192,22 @@ body {
     margin-bottom: 6px;
     color: var(--color-text);
 }
+.gemini-feedback del.correction-del {
+    text-decoration: line-through;
+    color: #c1392b;
+    background: rgba(193, 57, 43, 0.08);
+    padding: 0 3px;
+    border-radius: 3px;
+    margin-right: 1px;
+}
+.gemini-feedback ins.correction-ins {
+    text-decoration: none;
+    color: #16803c;
+    background: rgba(22, 128, 60, 0.1);
+    padding: 0 3px;
+    border-radius: 3px;
+    font-weight: 500;
+}
 .gemini-loading {
     width: 24px; height: 24px;
     border: 3px solid var(--color-border);
